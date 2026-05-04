@@ -160,12 +160,20 @@ suspend fun processDataWin(
         if (0 > tpagIdx) continue
         tileSourceImages[srcKey] = extractFromTPAG(dw.tpag.items[tpagIdx], texturePages)
     }
+    var clampedTileCount = 0
     for ((key, _) in uniqueTiles) {
         val srcKey = TileSourceKey(key.useSpriteDefinition, key.bgDef)
         val srcImg = tileSourceImages[srcKey] ?: continue
-        if (key.srcX + key.w > srcImg.width || key.srcY + key.h > srcImg.height) continue
+        if (0 > key.srcX || 0 > key.srcY) continue
+        if (key.srcX >= srcImg.width || key.srcY >= srcImg.height) continue
         if (key.w == 0 || key.h == 0) continue
-        val tileImg = extractSubImage(srcImg, key.srcX, key.srcY, key.w, key.h)
+        // Clamp tile rectangle to source bounds. Some rooms reference tiles whose requested rect extends past the source background
+        // The runner just samples whatever exists.
+        // Keep the original w/h in the imgName so the runtime  lookup key matches, the atlas entry stores only the in-bounds pixels.
+        val effW = minOf(key.w, srcImg.width - key.srcX)
+        val effH = minOf(key.h, srcImg.height - key.srcY)
+        if (effW != key.w || effH != key.h) clampedTileCount++
+        val tileImg = extractSubImage(srcImg, key.srcX, key.srcY, effW, effH)
         val defName = if (key.useSpriteDefinition) {
             dw.sprt.sprites[key.bgDef].name ?: "spr${key.bgDef}"
         } else {
@@ -174,6 +182,9 @@ suspend fun processDataWin(
         val imgName = "tile/${defName}_${key.srcX}_${key.srcY}_${key.w}x${key.h}"
         allImages.add(imgName to tileImg)
         atlasGroupKeys[imgName] = "tile/$defName"
+    }
+    if (clampedTileCount > 0) {
+        log("Clamped $clampedTileCount tiles whose source rect exceeded the background")
     }
 
     // Crop transparent borders before packing (sprites only)
