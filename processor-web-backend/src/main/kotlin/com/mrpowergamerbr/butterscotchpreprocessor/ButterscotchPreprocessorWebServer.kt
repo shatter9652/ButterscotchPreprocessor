@@ -181,21 +181,21 @@ class ButterscotchPreprocessorWebServer(
                     )
                 }
 
-                get("/web/butterscotch-bc16.elf") {
+                get("/assets/ps2/butterscotch-bc16.elf") {
                     call.respondBytes(
                         butterscotchBC16Elf,
                         contentType = ContentType.Application.OctetStream
                     )
                 }
 
-                get("/web/butterscotch-bc17.elf") {
+                get("/assets/ps2/butterscotch-bc17.elf") {
                     call.respondBytes(
                         butterscotchBC17Elf,
                         contentType = ContentType.Application.OctetStream
                     )
                 }
 
-                get("/web/ICON.ICO") {
+                get("/assets/ps2/ICON.ICO") {
                     call.respondBytes(
                         iconIco,
                         contentType = ContentType.Application.OctetStream
