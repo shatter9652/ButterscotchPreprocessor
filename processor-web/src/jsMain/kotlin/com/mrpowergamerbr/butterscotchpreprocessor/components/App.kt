@@ -70,14 +70,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 private val UNDERTALE_CONTROLLER_MAPPINGS = mapOf(
-    PS2PadKey.PAD_UP to GMLKey.VK_UP,
-    PS2PadKey.PAD_DOWN to GMLKey.VK_DOWN,
-    PS2PadKey.PAD_LEFT to GMLKey.VK_LEFT,
-    PS2PadKey.PAD_RIGHT to GMLKey.VK_RIGHT,
-    PS2PadKey.PAD_CROSS to GMLKey.KEY_Z,
-    PS2PadKey.PAD_SQUARE to GMLKey.KEY_X,
-    PS2PadKey.PAD_START to GMLKey.KEY_C,
-    PS2PadKey.PAD_TRIANGLE to GMLKey.VK_ESCAPE,
+    PS2PadKey.PAD_START to GMLKey.VK_ESCAPE,
     PS2PadKey.PAD_L1 to GMLKey.VK_PAGEDOWN,
     PS2PadKey.PAD_R1 to GMLKey.VK_PAGEUP,
     PS2PadKey.PAD_L2 to GMLKey.VK_F10,
@@ -99,6 +92,7 @@ data class LightSettings(
 data class Preset(
     val displayName: String,
     val gen8MatchName: String,
+    val gamepadEnabled: Boolean,
     val controller1Mappings: Map<PS2PadKey, GMLKey>,
     val controller2Mappings: Map<PS2PadKey, GMLKey>,
     val filesystemMappings: Map<String, String>,
@@ -119,6 +113,7 @@ data class Preset(
 private val UNDERTALE_PRESET = Preset(
     displayName = "Undertale",
     gen8MatchName = "UNDERTALE",
+    gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
     controller2Mappings = emptyMap(),
     filesystemMappings = mapOf(
@@ -161,6 +156,7 @@ private val UNDERTALE_PRESET = Preset(
 private val SURVEY_PROGRAM_PRESET = Preset(
     displayName = "DELTARUNE (SURVEY_PROGRAM)",
     gen8MatchName = "SURVEY_PROGRAM",
+    gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
     controller2Mappings = emptyMap(),
     filesystemMappings = mapOf(
@@ -193,6 +189,7 @@ private val SURVEY_PROGRAM_PRESET = Preset(
 private val DELTARUNE_CHAPTER_1_AND_2_PRESET = Preset(
     displayName = "DELTARUNE Chapter 1&2",
     gen8MatchName = "DELTARUNE Chapter 1&2",
+    gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
     controller2Mappings = emptyMap(),
     filesystemMappings = mapOf(
@@ -265,6 +262,7 @@ val DELTARUNE_FILESYSTEM_MAPPINGS = mapOf(
 private val DELTARUNE_CHAPTER_1 = Preset(
     displayName = "DELTARUNE Chapter 1",
     gen8MatchName = "DELTARUNE Chapter 1",
+    gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
     controller2Mappings = emptyMap(),
     filesystemMappings = DELTARUNE_FILESYSTEM_MAPPINGS,
@@ -285,6 +283,7 @@ private val DELTARUNE_CHAPTER_1 = Preset(
 private val DELTARUNE_CHAPTER_2 = Preset(
     displayName = "DELTARUNE Chapter 2",
     gen8MatchName = "DELTARUNE Chapter 2",
+    gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
     controller2Mappings = emptyMap(),
     filesystemMappings = DELTARUNE_FILESYSTEM_MAPPINGS,
@@ -305,6 +304,7 @@ private val DELTARUNE_CHAPTER_2 = Preset(
 private val DELTARUNE_CHAPTER_3 = Preset(
     displayName = "DELTARUNE Chapter 3",
     gen8MatchName = "DELTARUNE Chapter 3",
+    gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
     controller2Mappings = emptyMap(),
     filesystemMappings = DELTARUNE_FILESYSTEM_MAPPINGS,
@@ -325,6 +325,7 @@ private val DELTARUNE_CHAPTER_3 = Preset(
 private val DELTARUNE_CHAPTER_4 = Preset(
     displayName = "DELTARUNE Chapter 4",
     gen8MatchName = "DELTARUNE Chapter 4",
+    gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
     controller2Mappings = emptyMap(),
     filesystemMappings = DELTARUNE_FILESYSTEM_MAPPINGS,
@@ -358,6 +359,7 @@ fun App(m: ButterscotchPreprocessorWeb) {
     var loadedMusFiles by remember { mutableStateOf<Map<String, ByteArray>>(emptyMap()) }
     var loadedSourceFiles by remember { mutableStateOf<Map<String, ByteArray>>(emptyMap()) }
     var parsedGameName by remember { mutableStateOf<String?>(null) }
+    var gamepadEnabled by remember { mutableStateOf(false) }
     val controller1Mappings = remember {
         mutableStateMapOf(
             PS2PadKey.PAD_UP to GMLKey.VK_UP,
@@ -454,6 +456,7 @@ fun App(m: ButterscotchPreprocessorWeb) {
         eagerlyLoadedRooms.addAll(preset.eagerlyLoadedRooms)
         force4bppPatterns.clear()
         force4bppPatterns.addAll(preset.force4bppPatterns)
+        gamepadEnabled = preset.gamepadEnabled
     }
 
     val scope = rememberCoroutineScope()
@@ -533,6 +536,9 @@ fun App(m: ButterscotchPreprocessorWeb) {
                             for (mapping in filesystemMappings) {
                                 putJsonArray(mapping.key) { add(mapping.value) }
                             }
+                        }
+                        putJsonObject("gamepad") {
+                            put("enabled", gamepadEnabled)
                         }
                         putJsonObject("controller1Mappings") {
                             for ((key, value) in controller1Mappings) {
@@ -799,6 +805,15 @@ fun App(m: ButterscotchPreprocessorWeb) {
         }
 
         FieldWrappers {
+            DiscordToggle(
+                "gamepad-enabled",
+                "Use PlayStation 2 Gamepad via the GameMaker Gamepad API",
+                "When enabled, Butterscotch will expose the PlayStation 2 controller as a compatible Gamepad via the GameMaker Gamepad API.",
+                gamepadEnabled
+            ) {
+                gamepadEnabled = !gamepadEnabled
+            }
+
             ControllerMappings("Controller 1 Mappings", controller1Mappings)
             ControllerMappings("Controller 2 Mappings", controller2Mappings)
 
