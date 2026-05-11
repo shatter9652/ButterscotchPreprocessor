@@ -789,7 +789,6 @@ private fun writeAtlasMetadataBytes(
                 writer.writeShortLE(crop?.croppedWidth ?: entry.image.width)  // cropW
                 writer.writeShortLE(crop?.croppedHeight ?: entry.image.height) // cropH
                 writer.writeShortLE(clutIndexMap[imgName] ?: 0) // clutIndex
-                writer.writeByte(atlas.bpp)                 // bpp
                 continue
             }
         }
@@ -804,7 +803,6 @@ private fun writeAtlasMetadataBytes(
         writer.writeShortLE(0)       // cropW
         writer.writeShortLE(0)       // cropH
         writer.writeShortLE(0)       // clutIndex
-        writer.writeByte(0)          // bpp
     }
 
     // Tile entries
@@ -835,7 +833,6 @@ private fun writeAtlasMetadataBytes(
         writer.writeShortLE(crop?.croppedWidth ?: (entry?.image?.width ?: 0))  // cropW
         writer.writeShortLE(crop?.croppedHeight ?: (entry?.image?.height ?: 0)) // cropH
         writer.writeShortLE(clutIndexMap[imgName] ?: 0)             // clutIndex
-        writer.writeByte(atlas?.bpp ?: 0)                           // bpp
     }
 
     return writer.getAsByteArray()
