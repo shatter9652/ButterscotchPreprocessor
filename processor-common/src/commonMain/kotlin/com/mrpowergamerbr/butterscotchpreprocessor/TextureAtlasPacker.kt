@@ -15,7 +15,11 @@ class TextureAtlas(
 )
 
 object TextureAtlasPacker {
-    const val MAX_SIZE = 512
+    const val DEFAULT_MAX_SIZE = 512
+    const val FONT_MAX_SIZE = 1024
+
+    // Per-image atlas size budget
+    private fun maxSizeFor(name: String): Int = if (name.startsWith("font/")) FONT_MAX_SIZE else DEFAULT_MAX_SIZE
 
     // Pack ClutImages into texture atlases, grouped by groupKey and separated by bpp.
     fun packAtlases(images: List<ClutImage>, groupKeys: Map<String, String>): List<TextureAtlas> {
@@ -98,10 +102,11 @@ object TextureAtlasPacker {
 
             if (!packed) {
                 // Create new atlas(es) for this group
+                val groupMaxSize = sorted.maxOf { maxSizeFor(it.name) }
                 val remaining = sorted.toMutableList()
                 while (remaining.isNotEmpty()) {
-                    val atlas = TextureAtlas(atlases.size, bpp, MAX_SIZE, MAX_SIZE)
-                    val packer = MaxRectsPacker(MAX_SIZE, MAX_SIZE)
+                    val atlas = TextureAtlas(atlases.size, bpp, groupMaxSize, groupMaxSize)
+                    val packer = MaxRectsPacker(groupMaxSize, groupMaxSize)
 
                     val iterator = remaining.iterator()
                     while (iterator.hasNext()) {

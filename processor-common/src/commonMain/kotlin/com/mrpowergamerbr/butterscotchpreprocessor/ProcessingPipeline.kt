@@ -213,9 +213,11 @@ suspend fun processDataWin(
     for (i in allImages.indices) {
         val (name, img) = allImages[i]
 
-        // Resize any images exceeding 512x512
+        // Resize any images exceeding the max atlas size
         // We'll also resize any "problematic" sprites
-        val maxDim = if (name.startsWith("spr/spr_sidestalk")) {
+        val maxDim = if (name.startsWith("font/")) {
+            TextureAtlasPacker.FONT_MAX_SIZE
+        } else if (name.startsWith("spr/spr_sidestalk")) {
             16
         } else if (name.startsWith("spr/spr_mouthball_")) {
             32
