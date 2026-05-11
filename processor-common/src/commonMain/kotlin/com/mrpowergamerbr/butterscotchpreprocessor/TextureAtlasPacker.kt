@@ -16,7 +16,7 @@ class TextureAtlas(
 
 object TextureAtlasPacker {
     const val DEFAULT_MAX_SIZE = 512
-    const val FONT_MAX_SIZE = 1024
+    const val FONT_MAX_SIZE = 512
 
     // Per-image atlas size budget
     private fun maxSizeFor(name: String): Int = if (name.startsWith("font/")) FONT_MAX_SIZE else DEFAULT_MAX_SIZE
