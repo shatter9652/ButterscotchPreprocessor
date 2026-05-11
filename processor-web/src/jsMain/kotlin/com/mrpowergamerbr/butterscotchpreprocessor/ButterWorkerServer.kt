@@ -49,6 +49,7 @@ class ButterWorkerServer {
                         .mapKeys { it.key.toInt() }
                     val musFiles = jsObjectToByteArrayMap(request.musFiles)
                     val force4bppPatterns = request.force4bppPatterns.toList()
+                    val atlasSize = request.atlasSize
 
                     scope.launch {
                         // Spawn a worker pool so audio decoding can run in parallel across real threads
@@ -63,6 +64,7 @@ class ButterWorkerServer {
                                 audioGroupFiles,
                                 musFiles,
                                 force4bppPatterns,
+                                atlasSize,
                                 { audioBytes ->
                                     val pickedWorker = workers[nextWorker++ % workers.size]
                                     val response = pickedWorker.sendPacket(

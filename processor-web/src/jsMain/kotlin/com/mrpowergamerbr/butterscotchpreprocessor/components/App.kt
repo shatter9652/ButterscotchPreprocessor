@@ -108,10 +108,12 @@ data class Preset(
     val eagerlyLoadedRooms: Set<String>,
     val debugOverlayEnabled: Boolean,
     val force4bppPatterns: Set<String>,
+    val atlasSize: Int,
 )
 
 private val UNDERTALE_PRESET = Preset(
     displayName = "Undertale",
+    atlasSize = 512,
     gen8MatchName = "UNDERTALE",
     gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
@@ -155,6 +157,7 @@ private val UNDERTALE_PRESET = Preset(
 
 private val SURVEY_PROGRAM_PRESET = Preset(
     displayName = "DELTARUNE (SURVEY_PROGRAM)",
+    atlasSize = 512,
     gen8MatchName = "SURVEY_PROGRAM",
     gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
@@ -188,6 +191,7 @@ private val SURVEY_PROGRAM_PRESET = Preset(
 
 private val DELTARUNE_CHAPTER_1_AND_2_PRESET = Preset(
     displayName = "DELTARUNE Chapter 1&2",
+    atlasSize = 256,
     gen8MatchName = "DELTARUNE Chapter 1&2",
     gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
@@ -261,6 +265,7 @@ val DELTARUNE_FILESYSTEM_MAPPINGS = mapOf(
 
 private val DELTARUNE_CHAPTER_1 = Preset(
     displayName = "DELTARUNE Chapter 1",
+    atlasSize = 512,
     gen8MatchName = "DELTARUNE Chapter 1",
     gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
@@ -282,6 +287,7 @@ private val DELTARUNE_CHAPTER_1 = Preset(
 
 private val DELTARUNE_CHAPTER_2 = Preset(
     displayName = "DELTARUNE Chapter 2",
+    atlasSize = 256,
     gen8MatchName = "DELTARUNE Chapter 2",
     gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
@@ -303,6 +309,7 @@ private val DELTARUNE_CHAPTER_2 = Preset(
 
 private val DELTARUNE_CHAPTER_3 = Preset(
     displayName = "DELTARUNE Chapter 3",
+    atlasSize = 256,
     gen8MatchName = "DELTARUNE Chapter 3",
     gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
@@ -324,6 +331,7 @@ private val DELTARUNE_CHAPTER_3 = Preset(
 
 private val DELTARUNE_CHAPTER_4 = Preset(
     displayName = "DELTARUNE Chapter 4",
+    atlasSize = 256,
     gen8MatchName = "DELTARUNE Chapter 4",
     gamepadEnabled = true,
     controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
@@ -415,6 +423,8 @@ fun App(m: ButterscotchPreprocessorWeb) {
     val force4bppPatterns = remember {
         mutableStateSetOf<String>()
     }
+    var atlasSize by remember { mutableStateOf(512) }
+    var atlasSizeText by remember { mutableStateOf("512") }
     val eagerlyLoadedRooms = remember {
         mutableStateSetOf<String>()
     }
@@ -456,6 +466,8 @@ fun App(m: ButterscotchPreprocessorWeb) {
         eagerlyLoadedRooms.addAll(preset.eagerlyLoadedRooms)
         force4bppPatterns.clear()
         force4bppPatterns.addAll(preset.force4bppPatterns)
+        atlasSize = preset.atlasSize
+        atlasSizeText = preset.atlasSize.toString()
         gamepadEnabled = preset.gamepadEnabled
     }
 
@@ -1149,6 +1161,27 @@ fun App(m: ButterscotchPreprocessorWeb) {
             )
 
             FieldWrapper {
+                FieldInformation {
+                    Div(attrs = { classes("field-title") }) { Text("Texture Atlas Size") }
+                    Div(attrs = { classes("field-description") }) {
+                        Text("The width/height (in pixels) of each texture atlas page. Lower resolutions help to avoid VRAM thrashing, but at the same time also decreases the resolution of the textures to fit.")
+                    }
+                }
+
+                TextInput(atlasSizeText) {
+                    placeholder("512")
+                    onInput {
+                        val raw = it.value.filter { c -> c.isDigit() }.take(5)
+                        atlasSizeText = raw
+                        val parsed = raw.toIntOrNull()
+                        if (parsed != null && parsed > 0) {
+                            atlasSize = parsed
+                        }
+                    }
+                }
+            }
+
+            FieldWrapper {
                 Div(attrs = {
                     classes("field-information-with-control")
                 }) {
@@ -1236,7 +1269,8 @@ fun App(m: ButterscotchPreprocessorWeb) {
                                     loadedExternalAudio,
                                     loadedAudioGroupFiles,
                                     loadedMusFiles,
-                                    force4bppPatterns.toList()
+                                    force4bppPatterns.toList(),
+                                    atlasSize
                                 ),
                                 onEvent = { event ->
                                     if (event.type == S2CPacketType.PROGRESS) {

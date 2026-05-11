@@ -37,6 +37,7 @@ suspend fun processDataWin(
     audioGroupFiles: Map<Int, ByteArray> = emptyMap(),
     musFiles: Map<String, ByteArray> = emptyMap(),
     force4bppPatterns: List<String> = emptyList(),
+    atlasSize: Int = TextureAtlasPacker.DEFAULT_ATLAS_SIZE,
     audioDecoder: suspend (ByteArray) -> (AudioData?),
     progressCallback: ((String) -> Unit)? = null
 ): ProcessingResult {
@@ -216,7 +217,7 @@ suspend fun processDataWin(
         // Resize any images exceeding the max atlas size
         // We'll also resize any "problematic" sprites
         val maxDim = if (name.startsWith("font/")) {
-            TextureAtlasPacker.FONT_MAX_SIZE
+            atlasSize
         } else if (name.startsWith("spr/spr_sidestalk")) {
             16
         } else if (name.startsWith("spr/spr_mouthball_")) {
@@ -252,7 +253,7 @@ suspend fun processDataWin(
         } else if (name.startsWith("spr/spr_floweyx_mouthedge")) {
             64
         } else {
-            TextureAtlasPacker.DEFAULT_MAX_SIZE
+            atlasSize
         }
 
         if (maxDim >= img.width && maxDim >= img.height) continue
@@ -310,7 +311,7 @@ suspend fun processDataWin(
 
     // Step 4: Pack into texture atlases
     log("Packing texture atlases...")
-    val atlases = TextureAtlasPacker.packAtlases(clutImages, atlasGroupKeys)
+    val atlases = TextureAtlasPacker.packAtlases(clutImages, atlasGroupKeys, atlasSize)
     log("  ${atlases.count { it.bpp == 4 }} 4bpp atlases, ${atlases.count { it.bpp == 8 }} 8bpp atlases (${atlases.size} total)")
 
     // Step 5: Write CLUT binaries

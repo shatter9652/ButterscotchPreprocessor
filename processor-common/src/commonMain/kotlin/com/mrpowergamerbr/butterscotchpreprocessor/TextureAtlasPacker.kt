@@ -15,14 +15,10 @@ class TextureAtlas(
 )
 
 object TextureAtlasPacker {
-    const val DEFAULT_MAX_SIZE = 512
-    const val FONT_MAX_SIZE = 512
-
-    // Per-image atlas size budget
-    private fun maxSizeFor(name: String): Int = if (name.startsWith("font/")) FONT_MAX_SIZE else DEFAULT_MAX_SIZE
+    const val DEFAULT_ATLAS_SIZE = 512
 
     // Pack ClutImages into texture atlases, grouped by groupKey and separated by bpp.
-    fun packAtlases(images: List<ClutImage>, groupKeys: Map<String, String>): List<TextureAtlas> {
+    fun packAtlases(images: List<ClutImage>, groupKeys: Map<String, String>, atlasSize: Int): List<TextureAtlas> {
         // Separate by bpp
         val by4bpp = images.filter { it.bpp == 4 }
         val by8bpp = images.filter { it.bpp == 8 }
@@ -32,9 +28,9 @@ object TextureAtlasPacker {
         val atlases = mutableListOf<TextureAtlas>()
         val packers = mutableListOf<MaxRectsPacker>()
         println("  Packing 4bpp...")
-        packByBpp(by4bpp, 4, groupKeys, atlases, packers)
+        packByBpp(by4bpp, 4, groupKeys, atlases, packers, atlasSize)
         println("  Packing 8bpp...")
-        packByBpp(by8bpp, 8, groupKeys, atlases, packers)
+        packByBpp(by8bpp, 8, groupKeys, atlases, packers, atlasSize)
         println("  Packing done.")
         return atlases
     }
@@ -44,7 +40,8 @@ object TextureAtlasPacker {
         bpp: Int,
         groupKeys: Map<String, String>,
         atlases: MutableList<TextureAtlas>,
-        packers: MutableList<MaxRectsPacker>
+        packers: MutableList<MaxRectsPacker>,
+        atlasSize: Int
     ) {
         if (images.isEmpty()) return
 
@@ -102,11 +99,10 @@ object TextureAtlasPacker {
 
             if (!packed) {
                 // Create new atlas(es) for this group
-                val groupMaxSize = sorted.maxOf { maxSizeFor(it.name) }
                 val remaining = sorted.toMutableList()
                 while (remaining.isNotEmpty()) {
-                    val atlas = TextureAtlas(atlases.size, bpp, groupMaxSize, groupMaxSize)
-                    val packer = MaxRectsPacker(groupMaxSize, groupMaxSize)
+                    val atlas = TextureAtlas(atlases.size, bpp, atlasSize, atlasSize)
+                    val packer = MaxRectsPacker(atlasSize, atlasSize)
 
                     val iterator = remaining.iterator()
                     while (iterator.hasNext()) {

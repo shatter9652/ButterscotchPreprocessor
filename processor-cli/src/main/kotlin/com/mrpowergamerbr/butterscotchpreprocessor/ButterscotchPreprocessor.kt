@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import kotlinx.coroutines.runBlocking
 import java.awt.Color
@@ -29,6 +30,10 @@ class ButterscotchPreprocessor : CliktCommand(name = "butterscotch-preprocessor"
 
     val force4bppPatterns by option("--force-4bpp", help = "Force images whose names match this regex to be quantized to 4bpp (16 colors max). The regex must match the entire image name (example: spr_test.*). Can be passed multiple times.")
         .multiple()
+
+    val atlasSize by option("--atlas-size", help = "Texture atlas size in pixels (square)")
+        .int()
+        .default(TextureAtlasPacker.DEFAULT_ATLAS_SIZE)
 
     override fun run() {
         val dataWinFile = dataWinPath.toFile()
@@ -63,6 +68,7 @@ class ButterscotchPreprocessor : CliktCommand(name = "butterscotch-preprocessor"
                 audioGroupFiles,
                 musFiles,
                 force4bppPatterns,
+                atlasSize,
                 audioDecoder = { parseWav(it) ?: parseOgg(it) }
             ) { echo(it) }
         }

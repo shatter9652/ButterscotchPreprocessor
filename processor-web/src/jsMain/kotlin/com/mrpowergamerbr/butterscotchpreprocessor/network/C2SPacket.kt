@@ -31,6 +31,7 @@ external interface C2SProcessDataWin : C2SPacket {
     var audioGroupFiles: JsAny
     var musFiles: JsAny
     var force4bppPatterns: Array<String>
+    var atlasSize: Int
 }
 
 object C2SPacketType {
@@ -54,6 +55,7 @@ fun c2sProcessDataWin(
     audioGroupFiles: Map<Int, ByteArray>,
     musFiles: Map<String, ByteArray>,
     force4bppPatterns: List<String>,
+    atlasSize: Int,
 ): C2SProcessDataWin = unsafeJso {
     type = C2SPacketType.PROCESS_DATA_WIN
     this.data = data.unsafeCast<Int8Array<ArrayBufferLike>>()
@@ -61,6 +63,7 @@ fun c2sProcessDataWin(
     this.audioGroupFiles = byteArrayMapToJsObject(audioGroupFiles.mapKeys { it.key.toString() })
     this.musFiles = byteArrayMapToJsObject(musFiles)
     this.force4bppPatterns = force4bppPatterns.toTypedArray()
+    this.atlasSize = atlasSize
 }
 
 internal fun byteArrayMapToJsObject(map: Map<String, ByteArray>): JsAny {
