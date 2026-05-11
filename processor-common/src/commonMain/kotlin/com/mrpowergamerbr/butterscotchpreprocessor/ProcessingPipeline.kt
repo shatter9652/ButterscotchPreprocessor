@@ -252,7 +252,7 @@ suspend fun processDataWin(
         } else if (name.startsWith("spr/spr_floweyx_mouthedge")) {
             64
         } else {
-            512
+            TextureAtlasPacker.DEFAULT_MAX_SIZE
         }
 
         if (maxDim >= img.width && maxDim >= img.height) continue
