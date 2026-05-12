@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import kotlinx.coroutines.runBlocking
@@ -35,6 +36,10 @@ class ButterscotchPreprocessor : CliktCommand(name = "butterscotch-preprocessor"
         .int()
         .default(TextureAtlasPacker.DEFAULT_ATLAS_SIZE)
 
+    val target by option("--target", help = "Output target platform")
+        .choice("ps2", "ps3")
+        .default("ps2")
+
     override fun run() {
         val dataWinFile = dataWinPath.toFile()
         echo("Parsing $dataWinPath...")
@@ -43,6 +48,14 @@ class ButterscotchPreprocessor : CliktCommand(name = "butterscotch-preprocessor"
         val dataWinDir = dataWinFile.parentFile ?: File(".")
         val outputDirFile = outputDir.toFile()
         outputDir.createDirectories()
+
+        if (target == "ps3") {
+            val result = runBlocking { processDataWinPS3(bytes) { echo(it) } }
+            File(outputDirFile, "textures.bin").writeBytes(result.texturesBin)
+            echo("\nWrote ${result.texturesBin.size} bytes to ${File(outputDirFile, "TEXTURES.BIN").path}")
+            echo("Done!")
+            return
+        }
 
         // Debug dumps (JVM-only, using ImageIO)
         if (debugOutputDir != null) {

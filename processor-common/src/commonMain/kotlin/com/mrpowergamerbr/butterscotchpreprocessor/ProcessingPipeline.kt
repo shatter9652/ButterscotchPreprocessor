@@ -574,7 +574,7 @@ suspend fun processDataWin(
 }
 
 // Pure pixel copy from a TPAG item (replaces Graphics2D.drawImage)
-private fun extractFromTPAG(tpag: TexturePageItem, texturePages: List<PixelImage?>): PixelImage {
+internal fun extractFromTPAG(tpag: TexturePageItem, texturePages: List<PixelImage?>): PixelImage {
     val w = maxOf(tpag.boundingWidth, 1)
     val h = maxOf(tpag.boundingHeight, 1)
     val pixels = IntArray(w * h)

@@ -37,6 +37,20 @@ class ByteWriter(initialCapacity: Int = 256) {
         buffer[size++] = ((value shr 24) and 0xFF).toByte()
     }
 
+    fun writeShortBE(value: Int) {
+        resizeBufferIfNeeded(size + 2)
+        buffer[size++] = ((value shr 8) and 0xFF).toByte()
+        buffer[size++] = (value and 0xFF).toByte()
+    }
+
+    fun writeIntBE(value: Int) {
+        resizeBufferIfNeeded(size + 4)
+        buffer[size++] = ((value shr 24) and 0xFF).toByte()
+        buffer[size++] = ((value shr 16) and 0xFF).toByte()
+        buffer[size++] = ((value shr 8) and 0xFF).toByte()
+        buffer[size++] = (value and 0xFF).toByte()
+    }
+
     fun writeByteArray(array: ByteArray) {
         resizeBufferIfNeeded(size + array.size)
         array.copyInto(buffer, size)
