@@ -321,7 +321,7 @@ suspend fun processDataWin(
 
     // Step 6: Write texture pages
     log("Writing texture pages...")
-    val (texturesBin, atlasOffsets) = writeTexturePagesBytes(atlases, log)
+    val (texturesBin, atlasMetadata) = writeTexturePagesBytes(atlases, log)
 
     // Step 7: Build lookups and write ATLAS.BIN
     log("Writing ATLAS.BIN...")
@@ -347,7 +347,7 @@ suspend fun processDataWin(
         tpagIdxToImageName[tpagIdx] = imgName
     }
 
-    val atlasBin = writeAtlasMetadataBytes(dw, uniqueTiles, tpagIdxToImageName, atlasEntryMap, clutIndexMap, atlasOffsets, cropInfoMap)
+    val atlasBin = writeAtlasMetadataBytes(dw, uniqueTiles, tpagIdxToImageName, atlasEntryMap, clutIndexMap, atlasMetadata, cropInfoMap)
 
     // Step 8: Process sounds
     log("Processing sounds...")
@@ -676,17 +676,23 @@ private fun rleCompress(data: ByteArray): ByteArray {
     return writer.getAsByteArray()
 }
 
-private fun writeTexturePagesBytes(atlases: List<TextureAtlas>, log: (String) -> Unit): Pair<ByteArray, Map<Int, Long>> {
-    val headerSize = 128
-    val atlasOffsets = HashMap<Int, Long>()
+data class AtlasPayloadMetadata(
+    val offset: Long,
+    val width: Int,
+    val height: Int,
+    val bpp: Int,
+    val pixelDataSize: Int,
+    val compressionType: Int
+)
+
+private fun writeTexturePagesBytes(atlases: List<TextureAtlas>, log: (String) -> Unit): Pair<ByteArray, Map<Int, AtlasPayloadMetadata>> {
+    val atlasMetadata = HashMap<Int, AtlasPayloadMetadata>()
     var currentOffset = 0L
 
     val sortedAtlases = atlases.sortedBy { it.id }
     val writer = ByteWriter()
 
     for (atlas in sortedAtlases) {
-        atlasOffsets[atlas.id] = currentOffset
-
         // Composite all entries into a single pixel index buffer
         val canvas = ByteArray(atlas.width * atlas.height)
         for (entry in atlas.entries) {
@@ -729,23 +735,22 @@ private fun writeTexturePagesBytes(atlases: List<TextureAtlas>, log: (String) ->
             log("  Atlas ${atlas.id} (${atlas.bpp}bpp): RLE not beneficial (${uncompressedPixelData.size} -> ${rleData.size} bytes), keeping uncompressed")
         }
 
-        // Header (128 bytes)
-        writer.writeByte(0)                          // version
-        writer.writeShortLE(atlas.width)             // width
-        writer.writeShortLE(atlas.height)            // height
-        writer.writeByte(atlas.bpp)                  // bpp
-        writer.writeIntLE(pixelData.size)            // pixelDataSize
-        writer.writeByte(compressionType)            // compressionType (0 = uncompressed, 1 = RLE)
-        // Pad to 128 bytes (we wrote 1+2+2+1+4+1 = 11 bytes so far)
-        writer.writeZeroPadding(headerSize - 11)
+        atlasMetadata[atlas.id] = AtlasPayloadMetadata(
+            offset = currentOffset,
+            width = atlas.width,
+            height = atlas.height,
+            bpp = atlas.bpp,
+            pixelDataSize = pixelData.size,
+            compressionType = compressionType
+        )
 
-        // Pixel data
+        // Pixel data only (no per-atlas header, metadata lives in ATLAS.BIN's atlas table)
         writer.writeByteArray(pixelData)
 
-        currentOffset += headerSize + pixelData.size
+        currentOffset += pixelData.size
     }
 
-    return writer.getAsByteArray() to atlasOffsets
+    return writer.getAsByteArray() to atlasMetadata
 }
 
 private fun writeAtlasMetadataBytes(
@@ -754,12 +759,12 @@ private fun writeAtlasMetadataBytes(
     tpagIdxToImageName: Map<Int, String>,
     atlasEntryMap: Map<String, Pair<TextureAtlas, AtlasEntry>>,
     clutIndexMap: Map<String, Int>,
-    atlasOffsets: Map<Int, Long>,
+    atlasMetadata: Map<Int, AtlasPayloadMetadata>,
     cropInfoMap: Map<String, CropInfo>
 ): ByteArray {
     val tpagCount = dw.tpag.items.size
     val tileCount = uniqueTiles.size
-    val atlasCount = atlasOffsets.size
+    val atlasCount = atlasMetadata.size
 
     val writer = ByteWriter()
 
@@ -769,9 +774,15 @@ private fun writeAtlasMetadataBytes(
     writer.writeShortLE(tileCount)                 // tileEntryCount
     writer.writeShortLE(atlasCount)                // atlasCount
 
-    // Atlas offset table
-    for (id in atlasOffsets.keys.sorted()) {
-        writer.writeIntLE(atlasOffsets[id]!!.toInt())
+    // Atlas table
+    for (id in atlasMetadata.keys.sorted()) {
+        val meta = atlasMetadata[id]!!
+        writer.writeIntLE(meta.offset.toInt())     // offset
+        writer.writeShortLE(meta.width)            // width
+        writer.writeShortLE(meta.height)           // height
+        writer.writeByte(meta.bpp)                 // bpp
+        writer.writeIntLE(meta.pixelDataSize)      // pixelDataSize
+        writer.writeByte(meta.compressionType)     // compressionType (0 = uncompressed, 1 = RLE)
     }
 
     // TPAG entries
