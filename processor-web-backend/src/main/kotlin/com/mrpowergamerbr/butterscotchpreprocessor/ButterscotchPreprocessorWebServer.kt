@@ -16,6 +16,7 @@ import java.security.MessageDigest
 class ButterscotchPreprocessorWebServer(
     private val jsBundle: String,
     private val cssBundle: String,
+    private val butterscotchBC14Elf: ByteArray,
     private val butterscotchBC16Elf: ByteArray,
     private val butterscotchBC17Elf: ByteArray,
     private val iconIco: ByteArray
@@ -178,6 +179,13 @@ class ButterscotchPreprocessorWebServer(
                     call.respondText(
                         cssBundle,
                         contentType = ContentType.Text.CSS
+                    )
+                }
+
+                get("/assets/ps2/butterscotch-bc14.elf") {
+                    call.respondBytes(
+                        butterscotchBC14Elf,
+                        contentType = ContentType.Application.OctetStream
                     )
                 }
 

@@ -351,7 +351,40 @@ private val DELTARUNE_CHAPTER_4 = Preset(
     force4bppPatterns = emptySet(),
 )
 
-private val PRESETS = listOf(UNDERTALE_PRESET, SURVEY_PROGRAM_PRESET, DELTARUNE_CHAPTER_1_AND_2_PRESET, DELTARUNE_CHAPTER_1, DELTARUNE_CHAPTER_2, DELTARUNE_CHAPTER_3, DELTARUNE_CHAPTER_4)
+private val AM2R = Preset(
+    displayName = "AM2R",
+    atlasSize = 256,
+    gen8MatchName = "AM2R",
+    gamepadEnabled = true,
+    controller1Mappings = UNDERTALE_CONTROLLER_MAPPINGS,
+    controller2Mappings = emptyMap(),
+    filesystemMappings = mapOf(
+        "english.ini" to "\$BOOT:LANG/ENGLISH.INI",
+        "config.ini" to "mc0:/AM2R/CONFIG.INI",
+        "data.sav"  to "mc0:/AM2R/DATA.SAV",
+        "data.savd" to "mc0:/AM2R/DATA.SAVD",
+        "sav1"  to "mc0:/AM2R/SAV1",
+        "sav2"  to "mc0:/AM2R/SAV2",
+        "sav3"  to "mc0:/AM2R/SAV3",
+        "sav1d" to "mc0:/AM2R/SAV1D",
+        "sav2d" to "mc0:/AM2R/SAV2D",
+        "sav3d" to "mc0:/AM2R/SAV3D",
+    ),
+    disabledObjects = emptySet(),
+    bgAlpha = 68,
+    bgColorTopLeft = Color(120, 40, 10),
+    bgColorTopRight = Color(120, 40, 10),
+    bgColorBottomLeft = Color(55, 12, 5),
+    bgColorBottomRight = Color(55, 12, 5),
+    ambientColor = Color(120, 40, 10),
+    lights = DEFAULT_LIGHT_SETTINGS,
+    lazyLoadRooms = false,
+    eagerlyLoadedRooms = emptySet(),
+    debugOverlayEnabled = true,
+    force4bppPatterns = emptySet(),
+)
+
+private val PRESETS = listOf(UNDERTALE_PRESET, SURVEY_PROGRAM_PRESET, DELTARUNE_CHAPTER_1_AND_2_PRESET, DELTARUNE_CHAPTER_1, DELTARUNE_CHAPTER_2, DELTARUNE_CHAPTER_3, DELTARUNE_CHAPTER_4, AM2R)
 
 @Composable
 fun App(m: ButterscotchPreprocessorWeb) {
@@ -494,7 +527,12 @@ fun App(m: ButterscotchPreprocessorWeb) {
                 val dataWinBytes = loadedFileBytes!!
 
                 // Use custom ELF if provided, otherwise fetch default from resources
-                val validBytecodeVersion = if (parsedDataWin.gen8.bytecodeVersion == 17) 17 else 16
+                val validBytecodeVersion = when (parsedDataWin.gen8.bytecodeVersion) {
+                    17 -> 17
+                    16, 15 -> 16
+                    13, 14 -> 14
+                    else -> 16
+                }
 
                 val elfBytes = customElfBytes ?: fetchResourceBytes("/assets/ps2/butterscotch-bc$validBytecodeVersion.elf?v=${Date.now()}")
 
@@ -797,7 +835,7 @@ fun App(m: ButterscotchPreprocessorWeb) {
             style {
                 property("display", "flex")
                 property("gap", "8px")
-                property("flex-wrap", "auto")
+                property("flex-wrap", "wrap")
             }
         }) {
             for (preset in PRESETS) {
