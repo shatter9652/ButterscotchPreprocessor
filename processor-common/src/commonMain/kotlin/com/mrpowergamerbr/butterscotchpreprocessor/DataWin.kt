@@ -819,7 +819,7 @@ class DataWin {
                     options.parseTpag && chunkName == "TPAG" -> parseTPAG(reader, dw)
                     options.parseCode && chunkName == "CODE" -> parseCODE(reader, dw, chunkLength, chunkDataStart)
                     options.parseVari && chunkName == "VARI" -> parseVARI(reader, dw, chunkLength)
-                    options.parseFunc && chunkName == "FUNC" -> parseFUNC(reader, dw)
+                    options.parseFunc && chunkName == "FUNC" -> parseFUNC(reader, dw, chunkLength)
                     options.parseStrg && chunkName == "STRG" -> parseSTRG(reader, dw)
                     options.parseTxtr && chunkName == "TXTR" -> parseTXTR(reader, dw, chunkEnd)
                     options.parseAudo && chunkName == "AUDO" -> parseAUDO(reader, dw)
@@ -910,20 +910,61 @@ class DataWin {
         private fun parseOPTN(reader: BinaryReader, dw: DataWin) {
             val o = dw.optn
             val marker = reader.readInt32()
-            require(marker == Int.MIN_VALUE) { "OPTN: expected new format marker 0x80000000, got 0x${marker.toUInt().toString(16)}" }
-            reader.readInt32() // shaderExtVersion (always 2)
-            o.info = reader.readLong()
-            o.scale = reader.readInt32()
-            o.windowColor = reader.readInt32()
-            o.colorDepth = reader.readInt32()
-            o.resolution = reader.readInt32()
-            o.frequency = reader.readInt32()
-            o.vertexSync = reader.readInt32()
-            o.priority = reader.readInt32()
-            o.backImage = reader.readInt32()
-            o.frontImage = reader.readInt32()
-            o.loadImage = reader.readInt32()
-            o.loadAlpha = reader.readInt32()
+            val newFormat = marker == Int.MIN_VALUE
+            if (newFormat) {
+                reader.readInt32() // shaderExtVersion (always 2)
+                o.info = reader.readLong()
+                o.scale = reader.readInt32()
+                o.windowColor = reader.readInt32()
+                o.colorDepth = reader.readInt32()
+                o.resolution = reader.readInt32()
+                o.frequency = reader.readInt32()
+                o.vertexSync = reader.readInt32()
+                o.priority = reader.readInt32()
+                o.backImage = reader.readInt32()
+                o.frontImage = reader.readInt32()
+                o.loadImage = reader.readInt32()
+                o.loadAlpha = reader.readInt32()
+            } else {
+                // Old format (BC 13/14): seek back and remap a long boolean list into "modern" bitflags
+                reader.position -= 4
+                o.info = 0L
+                if (reader.readBool32()) o.info = o.info or 0x1L         // FullScreen
+                if (reader.readBool32()) o.info = o.info or 0x2L         // InterpolatePixels
+                if (reader.readBool32()) o.info = o.info or 0x4L         // UseNewAudio
+                if (reader.readBool32()) o.info = o.info or 0x8L         // NoBorder
+                if (reader.readBool32()) o.info = o.info or 0x10L        // ShowCursor
+                o.scale = reader.readInt32()
+                if (reader.readBool32()) o.info = o.info or 0x20L        // Sizeable
+                if (reader.readBool32()) o.info = o.info or 0x40L        // StayOnTop
+                o.windowColor = reader.readInt32()
+                if (reader.readBool32()) o.info = o.info or 0x80L        // ChangeResolution
+                o.colorDepth = reader.readInt32()
+                o.resolution = reader.readInt32()
+                o.frequency = reader.readInt32()
+                if (reader.readBool32()) o.info = o.info or 0x100L       // NoButtons
+                o.vertexSync = reader.readInt32()
+                if (reader.readBool32()) o.info = o.info or 0x200L       // ScreenKey
+                if (reader.readBool32()) o.info = o.info or 0x400L       // HelpKey
+                if (reader.readBool32()) o.info = o.info or 0x800L       // QuitKey
+                if (reader.readBool32()) o.info = o.info or 0x1000L      // SaveKey
+                if (reader.readBool32()) o.info = o.info or 0x2000L      // ScreenShotKey
+                if (reader.readBool32()) o.info = o.info or 0x4000L      // CloseSec
+                o.priority = reader.readInt32()
+                if (reader.readBool32()) o.info = o.info or 0x8000L      // Freeze
+                if (reader.readBool32()) o.info = o.info or 0x10000L     // ShowProgress
+                o.backImage = reader.readInt32()
+                o.frontImage = reader.readInt32()
+                o.loadImage = reader.readInt32()
+                if (reader.readBool32()) o.info = o.info or 0x20000L     // LoadTransparent
+                o.loadAlpha = reader.readInt32()
+                if (reader.readBool32()) o.info = o.info or 0x40000L     // ScaleProgress
+                if (reader.readBool32()) o.info = o.info or 0x80000L     // DisplayErrors
+                if (reader.readBool32()) o.info = o.info or 0x100000L    // WriteErrors
+                if (reader.readBool32()) o.info = o.info or 0x200000L    // AbortErrors
+                if (reader.readBool32()) o.info = o.info or 0x400000L    // VariableErrors
+                if (reader.readBool32()) o.info = o.info or 0x800000L    // CreationEventOrder
+            }
             val constantCount = reader.readInt32()
             o.constants = List(constantCount) { OptnConstant(reader.readStringPtr(), reader.readStringPtr()) }
         }
@@ -1150,20 +1191,23 @@ class DataWin {
                     hlsl11_PixelOffset = reader.readInt32()
                     val attrCount = reader.readInt32()
                     vertexAttributes = List(attrCount) { reader.readStringPtr() }
-                    version = reader.readInt32()
-                    pssl_VertexOffset = reader.readInt32()
-                    pssl_VertexLen = reader.readInt32()
-                    pssl_PixelOffset = reader.readInt32()
-                    pssl_PixelLen = reader.readInt32()
-                    cgVita_VertexOffset = reader.readInt32()
-                    cgVita_VertexLen = reader.readInt32()
-                    cgVita_PixelOffset = reader.readInt32()
-                    cgVita_PixelLen = reader.readInt32()
-                    if (version >= 2) {
-                        cgPS3_VertexOffset = reader.readInt32()
-                        cgPS3_VertexLen = reader.readInt32()
-                        cgPS3_PixelOffset = reader.readInt32()
-                        cgPS3_PixelLen = reader.readInt32()
+                    // Version field and console shader variants only exist on bytecodeVersion > 13.
+                    if (dw.gen8.bytecodeVersion > 13) {
+                        version = reader.readInt32()
+                        pssl_VertexOffset = reader.readInt32()
+                        pssl_VertexLen = reader.readInt32()
+                        pssl_PixelOffset = reader.readInt32()
+                        pssl_PixelLen = reader.readInt32()
+                        cgVita_VertexOffset = reader.readInt32()
+                        cgVita_VertexLen = reader.readInt32()
+                        cgVita_PixelOffset = reader.readInt32()
+                        cgVita_PixelLen = reader.readInt32()
+                        if (version >= 2) {
+                            cgPS3_VertexOffset = reader.readInt32()
+                            cgPS3_VertexLen = reader.readInt32()
+                            cgPS3_PixelOffset = reader.readInt32()
+                            cgPS3_PixelLen = reader.readInt32()
+                        }
                     }
                 }
             }
@@ -1709,25 +1753,43 @@ class DataWin {
         private fun parseCODE(reader: BinaryReader, dw: DataWin, chunkLength: Int, chunkDataStart: Int) {
             if (chunkLength == 0) return // YYC-compiled, no bytecode
 
+            val oldFormat = 14 >= dw.gen8.bytecodeVersion
+
             val codePtrs = reader.readPointerTable()
             val entries = codePtrs.map { ptr ->
                 reader.position = ptr
                 val name = reader.readStringPtr()
                 val length = reader.readInt32()
-                val localsCount = reader.readUint16()
-                val argumentsCount = reader.readUint16()
-                val relAddrFieldPos = reader.position
-                val bytecodeRelAddr = reader.readInt32()
-                val bytecodeAbsoluteOffset = relAddrFieldPos + bytecodeRelAddr
-                val offset = reader.readInt32()
-                CodeEntry(name, length, localsCount, argumentsCount, bytecodeAbsoluteOffset, offset)
+                if (oldFormat) {
+                    // BC<=14: instructions are inline right after the length field.
+                    // No localsCount/argumentsCount/bytecodeRelAddr/offset fields.
+                    val bytecodeAbsoluteOffset = reader.position
+                    reader.skip(length)
+                    CodeEntry(name, length, 0, 0, bytecodeAbsoluteOffset, 0)
+                } else {
+                    val localsCount = reader.readUint16()
+                    val argumentsCount = reader.readUint16()
+                    val relAddrFieldPos = reader.position
+                    val bytecodeRelAddr = reader.readInt32()
+                    val bytecodeAbsoluteOffset = relAddrFieldPos + bytecodeRelAddr
+                    val offset = reader.readInt32()
+                    CodeEntry(name, length, localsCount, argumentsCount, bytecodeAbsoluteOffset, offset)
+                }
             }
             dw.code.entries = entries
+
+            val chunkEnd = chunkDataStart + chunkLength
+
+            if (oldFormat) {
+                // BC<=14: bytecode is intermixed with entry headers. Capture the whole chunk as the bytecode buffer so that the per-entry bytecodeAbsoluteOffset values resolve correctly into it.
+                dw.bytecodeBufferBase = chunkDataStart
+                dw.bytecodeBuffer = reader.readBytesAt(chunkDataStart, chunkLength)
+                return
+            }
 
             // Load bytecode blob
             if (entries.isNotEmpty()) {
                 val blobStart = entries.minOf { it.bytecodeAbsoluteOffset }
-                val chunkEnd = chunkDataStart + chunkLength
                 val blobSize = chunkEnd - blobStart
                 dw.bytecodeBufferBase = blobStart
                 dw.bytecodeBuffer = reader.readBytesAt(blobStart, blobSize)
@@ -1736,17 +1798,41 @@ class DataWin {
 
         private fun parseVARI(reader: BinaryReader, dw: DataWin, chunkLength: Int) {
             val v = dw.vari
-            v.varCount1 = reader.readInt32()
-            v.varCount2 = reader.readInt32()
-            v.maxLocalVarCount = reader.readInt32()
-            val variableCount = (chunkLength - 12) / 20
+            // BC<=14 has no header (varCount1/varCount2/maxLocalVarCount) and 12-byte entries (no instanceType/varID).
+            // BC>=15 has a 12-byte header and 20-byte entries.
+            val oldFormat = dw.gen8.bytecodeVersion <= 14
+            val variableCount: Int
+            if (oldFormat) {
+                v.varCount1 = 0
+                v.varCount2 = 0
+                v.maxLocalVarCount = 0
+                variableCount = chunkLength / 12
+            } else {
+                v.varCount1 = reader.readInt32()
+                v.varCount2 = reader.readInt32()
+                v.maxLocalVarCount = reader.readInt32()
+                variableCount = (chunkLength - 12) / 20
+            }
             v.variables = List(variableCount) {
-                Variable(reader.readStringPtr(), reader.readInt32(), reader.readInt32(), reader.readInt32(), reader.readInt32())
+                val name = reader.readStringPtr()
+                val instanceType = if (oldFormat) 0 else reader.readInt32()
+                val varID = if (oldFormat) 0 else reader.readInt32()
+                Variable(name, instanceType, varID, reader.readInt32(), reader.readInt32())
             }
         }
 
-        private fun parseFUNC(reader: BinaryReader, dw: DataWin) {
+        private fun parseFUNC(reader: BinaryReader, dw: DataWin, chunkLength: Int) {
             val f = dw.func
+            // BC<=14 packs functions as a flat 12-byte-per-entry array (no SimpleList count prefix) and has no CodeLocals section.
+            if (dw.gen8.bytecodeVersion <= 14) {
+                val funcCount = chunkLength / 12
+                f.functions = List(funcCount) {
+                    Function(reader.readStringPtr(), reader.readInt32(), reader.readInt32())
+                }
+                f.codeLocals = emptyList()
+                return
+            }
+
             val funcCount = reader.readInt32()
             f.functions = List(funcCount) {
                 val name = reader.readStringPtr()
