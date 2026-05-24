@@ -1277,7 +1277,7 @@ fun App(m: ButterscotchPreprocessorWeb) {
                 TextInput(eeAtlasCacheBytesText) {
                     placeholder("2097152")
                     onInput {
-                        val raw = it.value.filter { c -> c.isDigit() }.take(5)
+                        val raw = it.value.filter { c -> c.isDigit() }
                         eeAtlasCacheBytesText = raw
                         val parsed = raw.toIntOrNull()
                         if (parsed != null && parsed > 0) {
