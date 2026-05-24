@@ -78,19 +78,20 @@ object ClutProcessor {
     ): ClutImage {
         val paletteSlots = if (targetBpp == 4) 16 else 256
         val hasTransparent = uniqueColors.contains(0)
-        val opaquePixels = if (hasTransparent) {
-            pixels.filter { (it ushr 24) != 0 }.toIntArray()
-        } else {
+        val visiblePixels = if (!hasTransparent) {
+            // Fast path: If the image does not have any transparent pixels, we can just return it as is
             pixels.copyOf()
+        } else {
+            pixels.filter { (it ushr 24) != 0 }.toIntArray()
         }
 
-        if (opaquePixels.isEmpty()) {
+        if (visiblePixels.isEmpty()) {
             val palette = IntArray(paletteSlots)
             return ClutImage(name, w, h, targetBpp, palette, 1, ByteArray(pixels.size))
         }
 
         val maxQuantColors = if (hasTransparent) paletteSlots - 1 else paletteSlots
-        val quantPalette = MedianCut.quantize(opaquePixels, maxQuantColors)
+        val quantPalette = MedianCut.quantize(visiblePixels, maxQuantColors)
 
         val unsortedPalette = mutableListOf<Int>()
         if (hasTransparent) unsortedPalette.add(0x00000000)
@@ -113,7 +114,7 @@ object ClutProcessor {
                 if (cached != null) {
                     cached.toByte()
                 } else {
-                    val n = nearestOpaqueSortedIdx(argb, sortedColors, hasTransparent)
+                    val n = nearestColorSortedIdx(argb, sortedColors, hasTransparent)
                     cache[argb] = n
                     n.toByte()
                 }
@@ -123,8 +124,8 @@ object ClutProcessor {
         return ClutImage(name, w, h, targetBpp, palette, sortedColors.size, indices)
     }
 
-    // Nearest-color search by squared RGB distance, skipping the transparent slot.
-    fun nearestOpaqueSortedIdx(argb: Int, sortedColors: IntArray, hasTransparent: Boolean): Int {
+    fun nearestColorSortedIdx(argb: Int, sortedColors: IntArray, hasTransparent: Boolean): Int {
+        val a = (argb ushr 24) and 0xFF
         val r = (argb shr 16) and 0xFF
         val g = (argb shr 8) and 0xFF
         val b = argb and 0xFF
@@ -133,10 +134,11 @@ object ClutProcessor {
         var bestDist = Int.MAX_VALUE
         for (i in start until sortedColors.size) {
             val c = sortedColors[i]
+            val da = ((c ushr 24) and 0xFF) - a
             val dr = ((c shr 16) and 0xFF) - r
             val dg = ((c shr 8) and 0xFF) - g
             val db = (c and 0xFF) - b
-            val d = dr * dr + dg * dg + db * db
+            val d = (dr * dr) + (dg * dg) + (db * db) + (da * da)
             if (bestDist > d) {
                 bestDist = d
                 bestIdx = i

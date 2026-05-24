@@ -1,7 +1,7 @@
 package com.mrpowergamerbr.butterscotchpreprocessor
 
 object MedianCut {
-    // Median-cut color quantization. Returns up to maxColors ARGB entries (alpha = 0xFF).
+    // Median-cut color quantization over the full RGBA space. Returns up to maxColors ARGB entries whose alpha mirrors the source pixels (preserving partial transparency).
     fun quantize(pixels: IntArray, maxColors: Int): IntArray {
         if (pixels.isEmpty() || maxColors <= 0) return IntArray(0)
 
@@ -40,10 +40,12 @@ object MedianCut {
         var rMin = 255; var rMax = 0
         var gMin = 255; var gMax = 0
         var bMin = 255; var bMax = 0
+        var aMin = 255; var aMax = 0
         var unsplittable = false
 
         init {
             for (p in pixels) {
+                val a = (p ushr 24) and 0xFF
                 val r = (p shr 16) and 0xFF
                 val g = (p shr 8) and 0xFF
                 val b = p and 0xFF
@@ -53,37 +55,44 @@ object MedianCut {
                 if (g > gMax) gMax = g
                 if (bMin > b) bMin = b
                 if (b > bMax) bMax = b
+                if (aMin > a) aMin = a
+                if (a > aMax) aMax = a
             }
         }
 
         val rRange get() = rMax - rMin
         val gRange get() = gMax - gMin
         val bRange get() = bMax - bMin
-        val longestRange get() = if (unsplittable) 0 else maxOf(rRange, gRange, bRange)
+        val aRange get() = aMax - aMin
+        val longestRange get() = if (unsplittable) 0 else maxOf(maxOf(rRange, gRange), maxOf(bRange, aRange))
 
         fun average(): Int {
             var rSum = 0L
             var gSum = 0L
             var bSum = 0L
+            var aSum = 0L
             for (p in pixels) {
+                aSum += (p ushr 24) and 0xFF
                 rSum += (p shr 16) and 0xFF
                 gSum += (p shr 8) and 0xFF
                 bSum += p and 0xFF
             }
             val n = pixels.size
+            val a = (aSum / n).toInt()
             val r = (rSum / n).toInt()
             val g = (gSum / n).toInt()
             val b = (bSum / n).toInt()
-            return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+            return (a shl 24) or (r shl 16) or (g shl 8) or b
         }
 
         // Split at a real value boundary on the widest channel. Returns null when every pixel in
         // the box has the same value on that channel (no real split exists).
         fun split(): Pair<Box, Box>? {
             val keyOf: (Int) -> Int = when {
-                rRange >= gRange && rRange >= bRange -> { p -> (p shr 16) and 0xFF }
-                gRange >= bRange -> { p -> (p shr 8) and 0xFF }
-                else -> { p -> p and 0xFF }
+                rRange >= gRange && rRange >= bRange && rRange >= aRange -> { p -> (p shr 16) and 0xFF }
+                gRange >= bRange && gRange >= aRange -> { p -> (p shr 8) and 0xFF }
+                bRange >= aRange -> { p -> p and 0xFF }
+                else -> { p -> (p ushr 24) and 0xFF }
             }
             val sorted = pixels.toTypedArray().also { it.sortBy(keyOf) }.toIntArray()
 
