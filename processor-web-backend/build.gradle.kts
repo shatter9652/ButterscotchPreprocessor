@@ -50,7 +50,7 @@ jib {
     }
 
     to {
-        image = "ghcr.io/mrpowergamerbr/butterscotchpreprocessor"
+        image = "ghcr.io/butterscotchrunner/butterscotchpreprocessor"
 
         auth {
             username = System.getProperty("DOCKER_USERNAME") ?: System.getenv("DOCKER_USERNAME")
