@@ -27,7 +27,6 @@ import com.mrpowergamerbr.butterscotchpreprocessor.plausible
 import com.mrpowergamerbr.butterscotchpreprocessor.utils.SVGIconManager
 import js.buffer.ArrayBuffer
 import js.date.Date
-import js.objects.unsafeJso
 import js.typedarrays.Uint8Array
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -62,7 +61,6 @@ import web.file.FileReader
 import web.http.arrayBuffer
 import web.http.fetch
 import web.url.URL
-import web.workers.Worker
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.iterator
@@ -109,6 +107,7 @@ data class Preset(
     val debugOverlayEnabled: Boolean,
     val force4bppPatterns: Set<String>,
     val atlasSize: Int,
+    val eeAtlasCacheBytes: Int
 )
 
 private val UNDERTALE_PRESET = Preset(
@@ -153,6 +152,7 @@ private val UNDERTALE_PRESET = Preset(
     eagerlyLoadedRooms = emptySet(),
     debugOverlayEnabled = true,
     force4bppPatterns = emptySet(),
+    eeAtlasCacheBytes = 2097152
 )
 
 private val SURVEY_PROGRAM_PRESET = Preset(
@@ -187,6 +187,7 @@ private val SURVEY_PROGRAM_PRESET = Preset(
     eagerlyLoadedRooms = emptySet(),
     debugOverlayEnabled = true,
     force4bppPatterns = emptySet(),
+    eeAtlasCacheBytes = 2097152
 )
 
 private val DELTARUNE_CHAPTER_1_AND_2_PRESET = Preset(
@@ -228,6 +229,7 @@ private val DELTARUNE_CHAPTER_1_AND_2_PRESET = Preset(
     eagerlyLoadedRooms = emptySet(),
     debugOverlayEnabled = true,
     force4bppPatterns = emptySet(),
+    eeAtlasCacheBytes = 2097152
 )
 
 val DELTARUNE_FILESYSTEM_MAPPINGS = mapOf(
@@ -283,6 +285,7 @@ private val DELTARUNE_CHAPTER_1 = Preset(
     eagerlyLoadedRooms = emptySet(),
     debugOverlayEnabled = true,
     force4bppPatterns = emptySet(),
+    eeAtlasCacheBytes = 2097152
 )
 
 private val DELTARUNE_CHAPTER_2 = Preset(
@@ -305,6 +308,7 @@ private val DELTARUNE_CHAPTER_2 = Preset(
     eagerlyLoadedRooms = emptySet(),
     debugOverlayEnabled = true,
     force4bppPatterns = emptySet(),
+    eeAtlasCacheBytes = 2097152
 )
 
 private val DELTARUNE_CHAPTER_3 = Preset(
@@ -327,6 +331,7 @@ private val DELTARUNE_CHAPTER_3 = Preset(
     eagerlyLoadedRooms = emptySet(),
     debugOverlayEnabled = true,
     force4bppPatterns = emptySet(),
+    eeAtlasCacheBytes = 2097152
 )
 
 private val DELTARUNE_CHAPTER_4 = Preset(
@@ -349,6 +354,7 @@ private val DELTARUNE_CHAPTER_4 = Preset(
     eagerlyLoadedRooms = emptySet(),
     debugOverlayEnabled = true,
     force4bppPatterns = emptySet(),
+    eeAtlasCacheBytes = 2097152
 )
 
 private val AM2R = Preset(
@@ -382,9 +388,45 @@ private val AM2R = Preset(
     eagerlyLoadedRooms = emptySet(),
     debugOverlayEnabled = true,
     force4bppPatterns = emptySet(),
+    eeAtlasCacheBytes = 2097152
 )
 
-private val PRESETS = listOf(UNDERTALE_PRESET, SURVEY_PROGRAM_PRESET, DELTARUNE_CHAPTER_1_AND_2_PRESET, DELTARUNE_CHAPTER_1, DELTARUNE_CHAPTER_2, DELTARUNE_CHAPTER_3, DELTARUNE_CHAPTER_4, AM2R)
+private val SONICEXE = Preset(
+    displayName = "SONIC.EXE",
+    atlasSize = 512,
+    gen8MatchName = "SONIC.EXE",
+    gamepadEnabled = false,
+    controller1Mappings = mapOf(
+        PS2PadKey.PAD_UP to GMLKey.VK_UP,
+        PS2PadKey.PAD_DOWN to GMLKey.VK_DOWN,
+        PS2PadKey.PAD_LEFT to GMLKey.VK_LEFT,
+        PS2PadKey.PAD_RIGHT to GMLKey.VK_RIGHT,
+        PS2PadKey.PAD_CROSS to GMLKey.VK_SPACE,
+        PS2PadKey.PAD_SQUARE to GMLKey.KEY_X,
+        PS2PadKey.PAD_START to GMLKey.VK_ENTER,
+        PS2PadKey.PAD_L1 to GMLKey.VK_PAGEDOWN,
+        PS2PadKey.PAD_R1 to GMLKey.VK_PAGEUP,
+        PS2PadKey.PAD_L2 to GMLKey.VK_F10,
+        PS2PadKey.PAD_SELECT to GMLKey.VK_F12,
+    ),
+    controller2Mappings = emptyMap(),
+    filesystemMappings = emptyMap(),
+    disabledObjects = emptySet(),
+    bgAlpha = 68,
+    bgColorTopLeft = Color(200, 30, 30),
+    bgColorTopRight = Color(200, 30, 30),
+    bgColorBottomLeft = Color(90, 10, 10),
+    bgColorBottomRight = Color(90, 10, 10),
+    ambientColor = Color(200, 30, 30),
+    lights = DEFAULT_LIGHT_SETTINGS,
+    lazyLoadRooms = false,
+    eagerlyLoadedRooms = emptySet(),
+    debugOverlayEnabled = true,
+    force4bppPatterns = emptySet(),
+    eeAtlasCacheBytes = 16777216
+)
+
+private val PRESETS = listOf(UNDERTALE_PRESET, SURVEY_PROGRAM_PRESET, DELTARUNE_CHAPTER_1_AND_2_PRESET, DELTARUNE_CHAPTER_1, DELTARUNE_CHAPTER_2, DELTARUNE_CHAPTER_3, DELTARUNE_CHAPTER_4, AM2R, SONICEXE)
 
 @Composable
 fun App(m: ButterscotchPreprocessorWeb) {
@@ -458,6 +500,10 @@ fun App(m: ButterscotchPreprocessorWeb) {
     }
     var atlasSize by remember { mutableStateOf(512) }
     var atlasSizeText by remember { mutableStateOf("512") }
+
+    var eeAtlasCacheBytes by remember { mutableStateOf(2097152) }
+    var eeAtlasCacheBytesText by remember { mutableStateOf("2097152") }
+
     val eagerlyLoadedRooms = remember {
         mutableStateSetOf<String>()
     }
@@ -502,6 +548,8 @@ fun App(m: ButterscotchPreprocessorWeb) {
         atlasSize = preset.atlasSize
         atlasSizeText = preset.atlasSize.toString()
         gamepadEnabled = preset.gamepadEnabled
+        eeAtlasCacheBytes = preset.eeAtlasCacheBytes
+        eeAtlasCacheBytesText = preset.eeAtlasCacheBytes.toString()
     }
 
     val scope = rememberCoroutineScope()
@@ -632,6 +680,7 @@ fun App(m: ButterscotchPreprocessorWeb) {
                                 add(eagerlyLoadedRoom)
                             }
                         }
+                        put("eeAtlasCacheBytes", eeAtlasCacheBytes)
                     }.toString().encodeToByteArray()),
                     Iso9660Creator.IsoFile("ICON.ICO", iconBytes)
                 ) + bootFiles)
@@ -1214,6 +1263,25 @@ fun App(m: ButterscotchPreprocessorWeb) {
                         val parsed = raw.toIntOrNull()
                         if (parsed != null && parsed > 0) {
                             atlasSize = parsed
+                        }
+                    }
+                }
+
+                FieldInformation {
+                    Div(attrs = { classes("field-title") }) { Text("EE RAM Atlas Cache Size") }
+                    Div(attrs = { classes("field-description") }) {
+                        Text("The size of the atlas cache in the PlayStation 2's EE RAM. Larger cache means less disk reads, which reduces stutters, but you do you more EE RAM. The size is in bytes.")
+                    }
+                }
+
+                TextInput(eeAtlasCacheBytesText) {
+                    placeholder("2097152")
+                    onInput {
+                        val raw = it.value.filter { c -> c.isDigit() }.take(5)
+                        eeAtlasCacheBytesText = raw
+                        val parsed = raw.toIntOrNull()
+                        if (parsed != null && parsed > 0) {
+                            eeAtlasCacheBytes = parsed
                         }
                     }
                 }
