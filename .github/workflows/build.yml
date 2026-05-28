@@ -1,40 +1,41 @@
-name: Continuous Integration
+name: Build Butterscotch Preprocessor
 
 on:
   push:
     branches:
       - main
-
-env:
-  DOCKER_USERNAME: "${{ github.actor }}"
-  DOCKER_PASSWORD: "${{ secrets.GITHUB_TOKEN }}"
+      - master
+  pull_request:
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-      packages: write
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Setup Java JDK
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
-          distribution: "temurin"
-          java-version: "21"
-          cache: "gradle"
+          distribution: temurin
+          java-version: 21
+          cache: gradle
 
-      # We don't use the "jib" task due to https://github.com/GoogleContainerTools/jib/issues/4301
-      - name: Build and Publish with Gradle
-        run: ./gradlew build :processor-web-backend:jibDockerBuild --no-daemon
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew
 
-      - name: Login and push Docker image
+      - name: Build CLI
+        run: ./gradlew :processor-cli:installDist
+
+      - name: Package CLI
         run: |
-          docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD ghcr.io
-          docker push ghcr.io/butterscotchrunner/butterscotchpreprocessor:latest
+          mkdir -p artifacts
+          cp -r processor-cli/build/install/processor-cli artifacts/
+
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: butterscotch-preprocessor-linux
+          path: artifacts/
